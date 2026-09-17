@@ -34,9 +34,9 @@ Versi awal menggunakan **Premium Dark**:
 
 ## Status
 
-**v0.4.0 — Finance foundation + Wallet & Category management**
+**v0.5.0 — Finance foundation + Wallet, Category & Budget management**
 
-Aplikasi masih berupa web app ringan tanpa build system. Data transaksi, dompet, dan kategori disimpan secara local-first melalui `localStorage` browser.
+Aplikasi masih berupa web app ringan tanpa build system. Data transaksi, dompet, kategori, dan anggaran disimpan secara local-first melalui `localStorage` browser.
 
 ## Menjalankan
 
@@ -76,8 +76,10 @@ Kemudian buka `http://localhost:8080`.
 - [x] Kategori pemasukan dan pengeluaran terpisah
 - [x] Sinkronisasi kategori dengan form transaksi
 - [x] Proteksi penghapusan kategori yang masih dipakai transaksi
-- [x] Recurring transaction
-- [ ] Anggaran per kategori
+- [x] Anggaran per kategori
+- [x] Perhitungan pemakaian anggaran dari transaksi aktual
+- [x] Proteksi duplikasi anggaran per kategori/bulan
+- [ ] Recurring transaction
 - [ ] Hutang/piutang dengan jatuh tempo
 - [ ] Tagihan berulang
 - [ ] Target tabungan
