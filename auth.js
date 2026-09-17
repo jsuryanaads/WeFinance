@@ -85,7 +85,10 @@
     const loggedIn = Boolean(session?.user);
     shell.hidden = !loggedIn;
     auth.classList.toggle('open', !loggedIn);
-    if (!loggedIn) return;
+    if (!loggedIn) {
+      window.dispatchEvent(new CustomEvent('wefinance:logout'));
+      return;
+    }
 
     const user = session.user;
     const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Pengguna';
@@ -104,6 +107,8 @@
       button.addEventListener('click', () => client.auth.signOut());
       profile.appendChild(button);
     }
+
+    window.dispatchEvent(new CustomEvent('wefinance:ready', { detail: { user } }));
   }
 
   client.auth.onAuthStateChange((_event, session) => applySession(session));
