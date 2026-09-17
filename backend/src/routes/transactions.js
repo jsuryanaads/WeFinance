@@ -29,10 +29,10 @@ router.get('/', async (req, res, next) => {
       `SELECT id, user_id, wallet_id, category_id, type, amount, transaction_date,
               description, note, debt_id, bill_id, goal_id, created_at, updated_at
        FROM transactions
-       WHERE deleted_at IS NULL
+       WHERE user_id = $1 AND deleted_at IS NULL
        ORDER BY transaction_date DESC, created_at DESC
-       LIMIT $1`,
-      [limit]
+       LIMIT $2`,
+      [req.user.id, limit]
     );
     res.json({ data: result.rows.map(normalizeTransaction) });
   } catch (error) {
@@ -45,8 +45,9 @@ router.get('/:id', async (req, res, next) => {
     const result = await pool.query(
       `SELECT id, user_id, wallet_id, category_id, type, amount, transaction_date,
               description, note, debt_id, bill_id, goal_id, created_at, updated_at
-       FROM transactions WHERE id = $1 AND deleted_at IS NULL`,
-      [req.params.id]
+       FROM transactions
+       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [req.params.id, req.user.id]
     );
     if (!result.rowCount) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ data: normalizeTransaction(result.rows[0]) });
@@ -56,9 +57,9 @@ router.get('/:id', async (req, res, next) => {
 });
 
 router.post('/', async (req, res, next) => {
-  const { userId, walletId, categoryId, type, amount, date, description, note, debtId, billId, goalId } = req.body || {};
-  if (!userId || !walletId || !type || !amount || !date || !description) {
-    return res.status(400).json({ error: 'userId, walletId, type, amount, date, and description are required' });
+  const { walletId, categoryId, type, amount, date, description, note, debtId, billId, goalId } = req.body || {};
+  if (!walletId || !type || !amount || !date || !description) {
+    return res.status(400).json({ error: 'walletId, type, amount, date, and description are required' });
   }
   if (!['income', 'expense', 'transfer'].includes(type) || Number(amount) <= 0) {
     return res.status(400).json({ error: 'Invalid transaction type or amount' });
@@ -71,7 +72,7 @@ router.post('/', async (req, res, next) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING id, user_id, wallet_id, category_id, type, amount, transaction_date,
                  description, note, debt_id, bill_id, goal_id, created_at, updated_at`,
-      [userId, walletId, categoryId || null, type, amount, date, description, note || null, debtId || null, billId || null, goalId || null]
+      [req.user.id, walletId, categoryId || null, type, amount, date, description, note || null, debtId || null, billId || null, goalId || null]
     );
     res.status(201).json({ data: normalizeTransaction(result.rows[0]) });
   } catch (error) {
