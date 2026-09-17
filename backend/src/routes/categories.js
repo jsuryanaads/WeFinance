@@ -1,27 +1,52 @@
 const express = require('express');
-const pool = require('../db');
 
 const router = express.Router();
 
 function normalize(row) {
-  return { id: row.id, userId: row.user_id, name: row.name, type: row.type, isSystem: row.is_system, createdAt: row.created_at, updatedAt: row.updated_at };
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    type: row.type,
+    isSystem: row.is_system,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
 }
 
 router.get('/', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT * FROM categories WHERE user_id = $1 OR user_id IS NULL ORDER BY is_system DESC, name ASC`, [req.user.id]);
-    res.json({ data: result.rows.map(normalize) });
-  } catch (error) { next(error); }
+    const { data, error } = await req.supabase
+      .from('categories')
+      .select('id,user_id,name,type,is_system,created_at,updated_at')
+      .or(`user_id.eq.${req.user.id},user_id.is.null`)
+      .order('is_system', { ascending: false })
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    res.json({ data: (data || []).map(normalize) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post('/', async (req, res, next) => {
   const { name, type = 'expense' } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'name is required' });
+  if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   if (!['income', 'expense'].includes(type)) return res.status(400).json({ error: 'type must be income or expense' });
+
   try {
-    const result = await pool.query(`INSERT INTO categories (user_id,name,type) VALUES ($1,$2,$3) RETURNING *`, [req.user.id,name.trim(),type]);
-    res.status(201).json({ data: normalize(result.rows[0]) });
-  } catch (error) { next(error); }
+    const { data, error } = await req.supabase
+      .from('categories')
+      .insert({ user_id: req.user.id, name: name.trim(), type })
+      .select('id,user_id,name,type,is_system,created_at,updated_at')
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ data: normalize(data) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
