@@ -22,6 +22,7 @@ let transactions = readJSON(STORAGE.transactions, SEED_TRANSACTIONS).map(normali
 let modalType = 'income';
 let activeFilter = 'semua';
 let searchTerm = '';
+let editingWalletId = null;
 
 const money = value => new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', maximumFractionDigits:0 }).format(Math.round(Number(value) || 0));
 const dateText = value => new Intl.DateTimeFormat('id-ID', { day:'2-digit', month:'short', year:'numeric' }).format(new Date(value + 'T00:00:00'));
@@ -79,7 +80,8 @@ function walletBalances(){
 
 function renderStats(){
   const t = totals();
-  const balance = wallets.reduce((sum,w) => sum + (walletBalances()[w.name] || 0), 0);
+  const balances = walletBalances();
+  const balance = wallets.reduce((sum,w) => sum + (balances[w.name] || 0), 0);
   document.querySelector('#income')?.replaceChildren(document.createTextNode(money(t.income)));
   document.querySelector('#expense')?.replaceChildren(document.createTextNode(money(t.expense)));
   document.querySelector('#balance')?.replaceChildren(document.createTextNode(money(balance)));
@@ -90,30 +92,21 @@ function txMarkup(t){
   const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '⇄';
   const walletText = isTransfer ? `${t.fromWallet || t.wallet} → ${t.toWallet || '—'}` : t.wallet;
   const amountClass = t.type === 'income' ? 'income' : t.type === 'expense' ? 'expense' : 'transfer';
-  return `<div class="tx">
-    <div><strong>${escapeHtml(t.description)}</strong><small>${dateText(t.date)}</small></div>
-    <div>${escapeHtml(t.category)}</div>
-    <div>${escapeHtml(walletText)}</div>
-    <div class="amount ${amountClass}">${sign} ${money(t.amount)}</div>
-  </div>`;
+  return `<div class="tx"><div><strong>${escapeHtml(t.description)}</strong><small>${dateText(t.date)}</small></div><div>${escapeHtml(t.category)}</div><div>${escapeHtml(walletText)}</div><div class="amount ${amountClass}">${sign} ${money(t.amount)}</div></div>`;
 }
 
 function filteredTransactions(){
-  return transactions
-    .filter(t => activeFilter === 'semua' || t.type === activeFilter)
-    .filter(t => `${t.description} ${t.category} ${t.wallet} ${t.fromWallet} ${t.toWallet}`.toLowerCase().includes(searchTerm.toLowerCase()))
-    .sort((a,b) => `${b.date}${b.id}`.localeCompare(`${a.date}${a.id}`));
+  return transactions.filter(t => activeFilter === 'semua' || t.type === activeFilter).filter(t => `${t.description} ${t.category} ${t.wallet} ${t.fromWallet} ${t.toWallet}`.toLowerCase().includes(searchTerm.toLowerCase())).sort((a,b) => `${b.date}${b.id}`.localeCompare(`${a.date}${a.id}`));
 }
 
 function renderTransactions(){
   const filtered = filteredTransactions();
   const header = '<div class="tx tx-head"><span>Tanggal / Deskripsi</span><span>Kategori</span><span>Dompet</span><span>Jumlah</span></div>';
-  const rows = filtered.map(txMarkup).join('');
   const empty = '<div class="empty">Belum ada transaksi yang sesuai.</div>';
   const list = document.querySelector('#transactionList');
   const pageList = document.querySelector('#transactionPageList');
   if (list) list.innerHTML = header + (filtered.slice(0,8).map(txMarkup).join('') || empty);
-  if (pageList) pageList.innerHTML = header + (rows || empty);
+  if (pageList) pageList.innerHTML = header + (filtered.map(txMarkup).join('') || empty);
 }
 
 function renderChart(){
@@ -124,11 +117,106 @@ function renderChart(){
   chart.innerHTML = values.map((income,i) => `<div class="bar-group"><i class="bar in" style="height:${income}%"></i><i class="bar out" style="height:${out[i]}%"></i></div>`).join('');
 }
 
+function walletTypeLabel(type){
+  return ({cash:'Tunai',bank:'Bank',ewallet:'E-Wallet',other:'Lainnya'})[type] || 'Lainnya';
+}
+
 function renderWallets(){
   const balances = walletBalances();
   const panel = document.querySelector('#page-wallets .placeholder-grid');
   if (!panel) return;
-  panel.innerHTML = wallets.map(w => `<div class="panel feature-card"><h2>${escapeHtml(w.name)}</h2><strong>${money(balances[w.name] || 0)}</strong><p>${escapeHtml(w.type)} · Saldo awal ${money(w.openingBalance)}</p></div>`).join('');
+  panel.innerHTML = `<div style="grid-column:1/-1;display:flex;justify-content:flex-end;margin-bottom:-2px"><button class="primary" id="addWallet">＋ Tambah Dompet</button></div>` + wallets.map(w => `
+    <div class="panel feature-card" style="position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+        <div><h2>${escapeHtml(w.name)}</h2><span style="color:#888;font-size:10px">${walletTypeLabel(w.type)}</span></div>
+        <div style="display:flex;gap:5px"><button class="wallet-action" data-wallet-edit="${w.id}" title="Edit">✎</button><button class="wallet-action danger" data-wallet-delete="${w.id}" title="Hapus">×</button></div>
+      </div>
+      <strong>${money(balances[w.name] || 0)}</strong>
+      <p>Saldo awal ${money(w.openingBalance)}</p>
+    </div>`).join('');
+  document.querySelector('#addWallet')?.addEventListener('click', () => openWalletModal());
+  document.querySelectorAll('[data-wallet-edit]').forEach(btn => btn.addEventListener('click', () => openWalletModal(btn.dataset.walletEdit)));
+  document.querySelectorAll('[data-wallet-delete]').forEach(btn => btn.addEventListener('click', () => deleteWallet(btn.dataset.walletDelete)));
+}
+
+function ensureWalletModal(){
+  if (document.querySelector('#walletModal')) return;
+  const el = document.createElement('div');
+  el.id = 'walletModal';
+  el.className = 'modal-backdrop';
+  el.innerHTML = `<div class="modal"><div class="modal-head"><div><p class="eyebrow">DOMPET & REKENING</p><h2 id="walletModalTitle">Tambah Dompet</h2></div><button class="icon-button" id="closeWalletModal">×</button></div><form id="walletForm"><label>Nama Dompet<input name="name" required maxlength="40" placeholder="Contoh: Bank BRI" /></label><div class="form-grid"><label>Jenis<select name="type"><option value="cash">Tunai</option><option value="bank">Bank</option><option value="ewallet">E-Wallet</option><option value="other">Lainnya</option></select></label><label>Saldo Awal<input name="openingBalance" type="number" min="0" step="1" required placeholder="0" /></label></div><button class="primary full" type="submit">Simpan Dompet</button></form></div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target.id === 'walletModal') el.classList.remove('open'); });
+  document.querySelector('#closeWalletModal').addEventListener('click', () => el.classList.remove('open'));
+  document.querySelector('#walletForm').addEventListener('submit', saveWallet);
+}
+
+function openWalletModal(id=null){
+  ensureWalletModal();
+  editingWalletId = id;
+  const modal = document.querySelector('#walletModal');
+  const form = document.querySelector('#walletForm');
+  const wallet = wallets.find(w => w.id === id);
+  form.reset();
+  document.querySelector('#walletModalTitle').textContent = wallet ? 'Edit Dompet' : 'Tambah Dompet';
+  if (wallet) {
+    form.elements.name.value = wallet.name;
+    form.elements.type.value = wallet.type;
+    form.elements.openingBalance.value = wallet.openingBalance;
+  }
+  modal.classList.add('open');
+  form.elements.name.focus();
+}
+
+function saveWallet(e){
+  e.preventDefault();
+  const data = new FormData(e.currentTarget);
+  const name = String(data.get('name') || '').trim();
+  const openingBalance = Number(data.get('openingBalance'));
+  const type = String(data.get('type') || 'other');
+  if (!name || !Number.isFinite(openingBalance) || openingBalance < 0) return;
+  const duplicate = wallets.some(w => w.name.toLowerCase() === name.toLowerCase() && w.id !== editingWalletId);
+  if (duplicate) { alert('Nama dompet sudah digunakan.'); return; }
+  if (editingWalletId) {
+    const wallet = wallets.find(w => w.id === editingWalletId);
+    if (!wallet) return;
+    const oldName = wallet.name;
+    wallet.name = name;
+    wallet.type = type;
+    wallet.openingBalance = openingBalance;
+    transactions.forEach(t => {
+      if (t.wallet === oldName) t.wallet = name;
+      if (t.fromWallet === oldName) t.fromWallet = name;
+      if (t.toWallet === oldName) t.toWallet = name;
+    });
+  } else {
+    wallets.push({id:uid('wallet'),name,type,openingBalance});
+  }
+  persist();
+  document.querySelector('#walletModal').classList.remove('open');
+  editingWalletId = null;
+  renderStats();
+  renderWallets();
+  setModalWalletOptions();
+  syncModalType();
+}
+
+function deleteWallet(id){
+  const wallet = wallets.find(w => w.id === id);
+  if (!wallet) return;
+  const used = transactions.some(t => t.wallet === wallet.name || t.fromWallet === wallet.name || t.toWallet === wallet.name);
+  if (used) {
+    alert(`Dompet “${wallet.name}” tidak dapat dihapus karena masih digunakan oleh transaksi. Edit nama/jenis atau hapus transaksi terkait terlebih dahulu.`);
+    return;
+  }
+  if (wallets.length <= 1) { alert('Minimal harus ada satu dompet.'); return; }
+  if (!confirm(`Hapus dompet “${wallet.name}”?`)) return;
+  wallets = wallets.filter(w => w.id !== id);
+  persist();
+  renderStats();
+  renderWallets();
+  setModalWalletOptions();
+  syncModalType();
 }
 
 function escapeHtml(text){
@@ -222,29 +310,18 @@ document.querySelector('#transactionForm')?.addEventListener('submit', e => {
   const data = new FormData(e.currentTarget);
   const amount = Number(data.get('amount'));
   if (!Number.isFinite(amount) || amount <= 0) return;
-  if (modalType === 'transfer' && data.get('fromWallet') === data.get('toWallet')) {
-    alert('Dompet asal dan tujuan harus berbeda.');
-    return;
-  }
+  if (modalType === 'transfer' && data.get('fromWallet') === data.get('toWallet')) { alert('Dompet asal dan tujuan harus berbeda.'); return; }
   const transaction = {
-    id: uid('tx'),
-    date: data.get('date'),
-    description: data.get('description').trim(),
+    id: uid('tx'), date: data.get('date'), description: String(data.get('description') || '').trim(),
     category: modalType === 'transfer' ? 'Transfer' : data.get('category'),
     wallet: modalType === 'transfer' ? data.get('fromWallet') : data.get('wallet'),
     fromWallet: modalType === 'transfer' ? data.get('fromWallet') : '',
-    toWallet: modalType === 'transfer' ? data.get('toWallet') : '',
-    amount,
-    type: modalType
+    toWallet: modalType === 'transfer' ? data.get('toWallet') : '', amount, type: modalType
   };
+  if (!transaction.description) return;
   transactions.unshift(transaction);
-  persist();
-  renderStats();
-  renderTransactions();
-  renderWallets();
-  e.currentTarget.reset();
-  document.querySelector('#modal')?.classList.remove('open');
-  showPage('transactions');
+  persist(); renderStats(); renderTransactions(); renderWallets();
+  e.currentTarget.reset(); document.querySelector('#modal')?.classList.remove('open'); showPage('transactions');
 });
 
 bindFilters();
