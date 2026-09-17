@@ -18,9 +18,11 @@ function safeMessageContent(message) {
 }
 
 router.post('/chat', async (req, res, next) => {
-  const { userId, message, history = [] } = req.body || {};
-  if (!userId || typeof message !== 'string' || !message.trim()) {
-    return res.status(400).json({ error: 'userId and message are required' });
+  const { message, history = [] } = req.body || {};
+  const userId = req.user.id;
+
+  if (typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'message is required' });
   }
 
   const normalizedHistory = Array.isArray(history)
@@ -63,7 +65,7 @@ router.post('/chat', async (req, res, next) => {
         } catch (_error) {
           throw new Error(`Invalid arguments for tool ${toolCall.function?.name || 'unknown'}`);
         }
-        const output = await executeTool(toolCall.function?.name, args, userId);
+        const output = await executeTool(toolCall.function?.name, { ...args, userId }, userId);
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
