@@ -5,6 +5,7 @@ const DEFAULT_CATEGORIES = [
   { id:'income-bonus', name:'Bonus', type:'income', system:false },
   { id:'income-freelance', name:'Freelance', type:'income', system:false },
   { id:'income-other', name:'Lainnya', type:'income', system:true },
+  { id:'income-debt-payment', name:'Pelunasan Piutang', type:'income', system:true },
   { id:'expense-food', name:'Makanan', type:'expense', system:false },
   { id:'expense-shopping', name:'Belanja', type:'expense', system:false },
   { id:'expense-bills', name:'Tagihan', type:'expense', system:false },
@@ -12,11 +13,23 @@ const DEFAULT_CATEGORIES = [
   { id:'expense-entertainment', name:'Hiburan', type:'expense', system:false },
   { id:'expense-health', name:'Kesehatan', type:'expense', system:false },
   { id:'expense-education', name:'Pendidikan', type:'expense', system:false },
-  { id:'expense-other', name:'Lainnya', type:'expense', system:true }
+  { id:'expense-other', name:'Lainnya', type:'expense', system:true },
+  { id:'expense-debt-payment', name:'Pelunasan Hutang', type:'expense', system:true }
 ];
 
 let categories = readJSON(CATEGORY_STORAGE_KEY, DEFAULT_CATEGORIES);
 let editingCategoryId = null;
+
+function ensureSystemCategories(){
+  let changed = false;
+  DEFAULT_CATEGORIES.filter(item => item.system).forEach(systemCategory => {
+    if (!categories.some(item => item.id === systemCategory.id)) {
+      categories.push({ ...systemCategory });
+      changed = true;
+    }
+  });
+  if (changed) persistCategories();
+}
 
 function persistCategories(){
   localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(categories));
@@ -156,6 +169,7 @@ showPage = function(page){
   if (page === 'categories') renderCategories();
 };
 
+ensureSystemCategories();
 persistCategories();
 renderCategoryOptions();
 renderCategories();
