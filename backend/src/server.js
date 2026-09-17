@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
 const transactionRoutes = require('./routes/transactions');
+const walletRoutes = require('./routes/wallets');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -22,10 +23,11 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.get('/api', (_req, res) => {
-  res.json({ name: 'WeFinance API', version: '1.1.0', status: 'ready', modules: ['transactions'] });
+  res.json({ name: 'WeFinance API', version: '1.2.0', status: 'ready', modules: ['transactions', 'wallets'] });
 });
 
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/wallets', walletRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
