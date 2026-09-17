@@ -34,15 +34,13 @@ Versi awal menggunakan **Premium Dark**:
 
 ## Status
 
-**v0.1.0 — UI foundation + transaction MVP**
+**v0.3.0 — Finance foundation + Wallet CRUD**
 
-Saat ini aplikasi berupa web app ringan tanpa build system. Data transaksi demo dapat ditambah melalui form **Transaksi Baru** dan disimpan di `localStorage` browser.
+Aplikasi masih berupa web app ringan tanpa build system. Data transaksi dan dompet disimpan secara local-first melalui `localStorage` browser.
 
 ## Menjalankan
 
 Buka `index.html` langsung di browser atau gunakan static server sederhana.
-
-Contoh:
 
 ```bash
 python -m http.server 8080
@@ -63,9 +61,17 @@ Kemudian buka `http://localhost:8080`.
 - [x] Responsive layout
 
 ### Phase 2 — Finance Engine
-- [ ] Model rekening/dompet yang benar
-- [ ] Saldo per dompet
-- [ ] Transfer antar rekening
+- [x] Model rekening/dompet
+- [x] Saldo per dompet
+- [x] Transfer antar rekening
+- [x] Filter dan pencarian transaksi
+- [x] Validasi transaksi
+- [x] Persistensi localStorage
+
+### Phase 3 — Finance Management
+- [x] Wallet CRUD
+- [x] Opening balance per dompet
+- [x] Proteksi penghapusan dompet yang masih dipakai transaksi
 - [ ] Kategori custom
 - [ ] Recurring transaction
 - [ ] Anggaran per kategori
@@ -73,7 +79,7 @@ Kemudian buka `http://localhost:8080`.
 - [ ] Tagihan berulang
 - [ ] Target tabungan
 
-### Phase 3 — Data & Reporting
+### Phase 4 — Data & Reporting
 - [ ] Database persistence
 - [ ] Authentication
 - [ ] Backup / restore
@@ -81,7 +87,7 @@ Kemudian buka `http://localhost:8080`.
 - [ ] Laporan cash flow
 - [ ] Analitik kategori dan tren
 
-### Phase 4 — Smart Finance
+### Phase 5 — Smart Finance
 - [ ] OCR struk
 - [ ] Smart categorization
 - [ ] Anomaly detection
@@ -92,5 +98,5 @@ Kemudian buka `http://localhost:8080`.
 1. **Transaction-first:** pencatatan harus cepat.
 2. **Data integrity:** saldo, transfer, hutang, dan tagihan harus konsisten.
 3. **Progressive complexity:** fitur lanjutan tidak mengganggu pencatatan sederhana.
-4. **Local-first foundation:** UI dapat berjalan tanpa backend sebelum finance engine dipindahkan ke database.
+4. **Local-first foundation:** finance engine divalidasi sebelum backend/database.
 5. **Privacy by design:** data keuangan tidak dikirim ke layanan eksternal tanpa kebutuhan dan persetujuan yang jelas.
