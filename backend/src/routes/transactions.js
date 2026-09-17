@@ -1,7 +1,8 @@
 const express = require('express');
-const pool = require('../db');
 
 const router = express.Router();
+
+const TRANSACTION_SELECT = 'id,user_id,wallet_id,category_id,type,amount,transaction_date,description,note,debt_id,bill_id,goal_id,created_at,updated_at';
 
 function normalizeTransaction(row) {
   return {
@@ -25,16 +26,16 @@ function normalizeTransaction(row) {
 router.get('/', async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
-    const result = await pool.query(
-      `SELECT id, user_id, wallet_id, category_id, type, amount, transaction_date,
-              description, note, debt_id, bill_id, goal_id, created_at, updated_at
-       FROM transactions
-       WHERE user_id = $1 AND deleted_at IS NULL
-       ORDER BY transaction_date DESC, created_at DESC
-       LIMIT $2`,
-      [req.user.id, limit]
-    );
-    res.json({ data: result.rows.map(normalizeTransaction) });
+    const { data, error } = await req.supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .is('deleted_at', null)
+      .order('transaction_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    res.json({ data: (data || []).map(normalizeTransaction) });
   } catch (error) {
     next(error);
   }
@@ -42,15 +43,16 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const result = await pool.query(
-      `SELECT id, user_id, wallet_id, category_id, type, amount, transaction_date,
-              description, note, debt_id, bill_id, goal_id, created_at, updated_at
-       FROM transactions
-       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
-      [req.params.id, req.user.id]
-    );
-    if (!result.rowCount) return res.status(404).json({ error: 'Transaction not found' });
-    res.json({ data: normalizeTransaction(result.rows[0]) });
+    const { data, error } = await req.supabase
+      .from('transactions')
+      .select(TRANSACTION_SELECT)
+      .eq('id', req.params.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Transaction not found' });
+    res.json({ data: normalizeTransaction(data) });
   } catch (error) {
     next(error);
   }
@@ -58,23 +60,36 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   const { walletId, categoryId, type, amount, date, description, note, debtId, billId, goalId } = req.body || {};
-  if (!walletId || !type || !amount || !date || !description) {
+  if (!walletId || !type || amount === undefined || amount === null || !date || !description?.trim()) {
     return res.status(400).json({ error: 'walletId, type, amount, date, and description are required' });
   }
-  if (!['income', 'expense', 'transfer'].includes(type) || Number(amount) <= 0) {
+  if (!['income', 'expense', 'transfer'].includes(type) || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
     return res.status(400).json({ error: 'Invalid transaction type or amount' });
   }
 
   try {
-    const result = await pool.query(
-      `INSERT INTO transactions
-       (user_id, wallet_id, category_id, type, amount, transaction_date, description, note, debt_id, bill_id, goal_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING id, user_id, wallet_id, category_id, type, amount, transaction_date,
-                 description, note, debt_id, bill_id, goal_id, created_at, updated_at`,
-      [req.user.id, walletId, categoryId || null, type, amount, date, description, note || null, debtId || null, billId || null, goalId || null]
-    );
-    res.status(201).json({ data: normalizeTransaction(result.rows[0]) });
+    const payload = {
+      user_id: req.user.id,
+      wallet_id: walletId,
+      category_id: categoryId || null,
+      type,
+      amount: Number(amount),
+      transaction_date: date,
+      description: description.trim(),
+      note: note || null,
+      debt_id: debtId || null,
+      bill_id: billId || null,
+      goal_id: goalId || null
+    };
+
+    const { data, error } = await req.supabase
+      .from('transactions')
+      .insert(payload)
+      .select(TRANSACTION_SELECT)
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ data: normalizeTransaction(data) });
   } catch (error) {
     next(error);
   }
