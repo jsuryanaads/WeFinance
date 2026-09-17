@@ -9,17 +9,17 @@ function normalize(row) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const result = await pool.query(`SELECT * FROM categories ORDER BY is_system DESC, name ASC`);
+    const result = await pool.query(`SELECT * FROM categories WHERE user_id = $1 OR user_id IS NULL ORDER BY is_system DESC, name ASC`, [req.user.id]);
     res.json({ data: result.rows.map(normalize) });
   } catch (error) { next(error); }
 });
 
 router.post('/', async (req, res, next) => {
-  const { userId, name, type = 'expense' } = req.body || {};
-  if (!userId || !name) return res.status(400).json({ error: 'userId and name are required' });
+  const { name, type = 'expense' } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name is required' });
   if (!['income', 'expense'].includes(type)) return res.status(400).json({ error: 'type must be income or expense' });
   try {
-    const result = await pool.query(`INSERT INTO categories (user_id,name,type) VALUES ($1,$2,$3) RETURNING *`, [userId,name.trim(),type]);
+    const result = await pool.query(`INSERT INTO categories (user_id,name,type) VALUES ($1,$2,$3) RETURNING *`, [req.user.id,name.trim(),type]);
     res.status(201).json({ data: normalize(result.rows[0]) });
   } catch (error) { next(error); }
 });
