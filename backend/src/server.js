@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
+const { requireAuth } = require('./middleware/auth');
 const transactionRoutes = require('./routes/transactions');
 const walletRoutes = require('./routes/wallets');
 const categoryRoutes = require('./routes/categories');
@@ -25,13 +26,13 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.get('/api', (_req, res) => {
-  res.json({ name: 'WeFinance API', version: '1.4.0', status: 'ready', modules: ['transactions', 'wallets', 'categories', 'ai'] });
+  res.json({ name: 'WeFinance API', version: '1.5.0', status: 'ready', modules: ['transactions', 'wallets', 'categories', 'ai'], auth: 'supabase' });
 });
 
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/wallets', walletRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/ai', aiRoutes);
+app.use('/api/transactions', requireAuth, transactionRoutes);
+app.use('/api/wallets', requireAuth, walletRoutes);
+app.use('/api/categories', requireAuth, categoryRoutes);
+app.use('/api/ai', requireAuth, aiRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
