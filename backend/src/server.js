@@ -6,6 +6,7 @@ const pool = require('./db');
 const transactionRoutes = require('./routes/transactions');
 const walletRoutes = require('./routes/wallets');
 const categoryRoutes = require('./routes/categories');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -24,12 +25,13 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.get('/api', (_req, res) => {
-  res.json({ name: 'WeFinance API', version: '1.3.0', status: 'ready', modules: ['transactions', 'wallets', 'categories'] });
+  res.json({ name: 'WeFinance API', version: '1.4.0', status: 'ready', modules: ['transactions', 'wallets', 'categories', 'ai'] });
 });
 
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/wallets', walletRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
