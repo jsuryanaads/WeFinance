@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE,
   name TEXT NOT NULL,
+  password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS transactions_user_date_idx ON transactions(user_id, transaction_date DESC);
 CREATE INDEX IF NOT EXISTS transactions_wallet_idx ON transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS transactions_category_idx ON transactions(category_id);
+CREATE INDEX IF NOT EXISTS profiles_email_lower_idx ON profiles(lower(email));
 
 CREATE TABLE IF NOT EXISTS transaction_transfers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -189,3 +191,12 @@ BEGIN
     EXECUTE format('CREATE TRIGGER %I_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', table_name, table_name);
   END LOOP;
 END $$;
+
+
+-- Ownership constraints added for finance-data integrity.
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_debt_id_fkey;
+ALTER TABLE transactions ADD CONSTRAINT transactions_debt_id_fkey FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE RESTRICT;
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_bill_id_fkey;
+ALTER TABLE transactions ADD CONSTRAINT transactions_bill_id_fkey FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE RESTRICT;
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_goal_id_fkey;
+ALTER TABLE transactions ADD CONSTRAINT transactions_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE RESTRICT;
