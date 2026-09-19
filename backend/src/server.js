@@ -3,14 +3,23 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
+const { authRequired } = require('./auth');
+const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
 const walletRoutes = require('./routes/wallets');
 const categoryRoutes = require('./routes/categories');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://jsuryanaads.github.io/WeFinance').split(',').map(v => v.trim()).filter(Boolean);
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(v => v.trim()) : true }));
+app.disable('x-powered-by');
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  }
+}));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', async (_req, res) => {
@@ -22,20 +31,16 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ ok: false, service: 'wefinance-api', database: 'unavailable' });
   }
 });
+app.get('/api', (_req, res) => res.json({ name:'WeFinance API', version:'1.4.0', status:'ready', modules:['auth','transactions','wallets','categories'] }));
 
-app.get('/api', (_req, res) => {
-  res.json({ name: 'WeFinance API', version: '1.3.0', status: 'ready', modules: ['transactions', 'wallets', 'categories'] });
-});
-
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/wallets', walletRoutes);
-app.use('/api/categories', categoryRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/transactions', authRequired, transactionRoutes);
+app.use('/api/wallets', authRequired, walletRoutes);
+app.use('/api/categories', authRequired, categoryRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
+  if (err.message === 'Origin not allowed by CORS') return res.status(403).json({ error:'Origin not allowed' });
+  res.status(500).json({ error:'Internal server error' });
 });
-
-app.listen(port, () => {
-  console.log(`WeFinance API running on http://localhost:${port}`);
-});
+app.listen(port, () => console.log(`WeFinance API running on port ${port}`));
