@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express=require('express');
 const pool=require('../db');
 const router=express.Router();
@@ -28,10 +29,7 @@ router.post('/sync',async(req,res,next)=>{
       const r=await client.query(`INSERT INTO transactions(user_id,wallet_id,category_id,type,amount,transaction_date,description,note)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
         [req.user.id,walletId,categoryId||null,t.type||'expense',Number(t.amount)||0,t.date||new Date().toISOString().slice(0,10),String(t.description||'Transaksi'),t.note||null]);
-      if(t.type==='transfer'){
-        const to=walletMap.get(String(t.toWalletId||t.toWallet));
-        if(to)await client.query('INSERT INTO transaction_transfers(transaction_id,from_wallet_id,to_wallet_id) VALUES($1,$2,$3)',[r.rows[0].id,walletId,to]);
-      }
+      if(t.type==='transfer'){ const to=walletMap.get(String(t.toWalletId||t.toWallet)); if(to)await client.query('UPDATE transactions SET from_wallet_id=$1,to_wallet_id=$2,transfer_group_id=$3 WHERE id=$4',[walletId,to,require('crypto').randomUUID(),r.rows[0].id]); }
     }
     await client.query('COMMIT');
     res.json({ok:true});
