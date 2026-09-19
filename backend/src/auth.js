@@ -1,59 +1,25 @@
-const crypto = require('crypto');
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 
-const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
-
-function requireSecret() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret || secret.length < 32) throw new Error('AUTH_SECRET must be set and at least 32 characters long');
-  return secret;
+function assertConfig() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY must be configured');
 }
-function sign(payload) {
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = crypto.createHmac('sha256', requireSecret()).update(body).digest('base64url');
-  return body + '.' + sig;
+async function verifySupabaseToken(token) {
+  assertConfig();
+  if (!token) return null;
+  const response = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + token } });
+  if (!response.ok) return null;
+  const user = await response.json();
+  return user?.id ? user : null;
 }
-function verify(token) {
-  if (!token || typeof token !== 'string') return null;
-  const [body, sig] = token.split('.');
-  if (!body || !sig) return null;
-  const expected = crypto.createHmac('sha256', requireSecret()).update(body).digest('base64url');
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (!payload.sub || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null;
-    return payload;
-  } catch { return null; }
-}
-function createToken(user) {
-  const now = Math.floor(Date.now() / 1000);
-  return sign({ sub: user.id, email: user.email, iat: now, exp: now + TOKEN_TTL_SECONDS });
-}
-function hashPassword(password) {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (err, derived) => {
-      if (err) return reject(err);
-      resolve(`scrypt:${salt}:${derived.toString('hex')}`);
-    });
-  });
-}
-function verifyPassword(password, stored) {
-  return new Promise((resolve, reject) => {
-    const [scheme, salt, hash] = String(stored || '').split(':');
-    if (scheme !== 'scrypt' || !salt || !hash) return resolve(false);
-    crypto.scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 }, (err, derived) => {
-      if (err) return reject(err);
-      const expected = Buffer.from(hash, 'hex');
-      resolve(expected.length === derived.length && crypto.timingSafeEqual(expected, derived));
-    });
-  });
-}
-function authRequired(req, res, next) {
+async function authRequired(req, res, next) {
   const header = req.get('authorization') || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const payload = verify(token);
-  if (!payload) return res.status(401).json({ error: 'Authentication required' });
-  req.user = { id: payload.sub, email: payload.email };
-  next();
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  try {
+    const user = await verifySupabaseToken(token);
+    if (!user) return res.status(401).json({ error: 'Authentication required' });
+    req.user = { id: user.id, email: user.email || null, name: user.user_metadata?.name || null };
+    next();
+  } catch (error) { next(error); }
 }
-module.exports = { createToken, hashPassword, verifyPassword, authRequired };
+module.exports = { authRequired, verifySupabaseToken };
