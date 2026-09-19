@@ -1,0 +1,32 @@
+name: WeFinance Backend CI
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm install --package-lock-only
+      - run: node --check src/server.js
+      - run: node --check src/auth.js
+      - run: node --check src/routes/auth.js
+      - run: node --check src/routes/transactions.js
+      - run: node --check src/routes/wallets.js
+      - run: node --check src/routes/categories.js
