@@ -9,12 +9,13 @@ const DEFAULT_WALLETS = [
   { id: 'ewallet', name: 'E-Wallet', type: 'ewallet', openingBalance: 2390000 }
 ];
 
+function seedDate(daysAgo){ const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-daysAgo); return d.toISOString().slice(0,10); }
 const SEED_TRANSACTIONS = [
-  { id:'tx-001', date:'2026-09-25', description:'Kopi & Cemilan', category:'Makanan', wallet:'Cash', amount:35000, type:'expense' },
-  { id:'tx-002', date:'2026-09-24', description:'Freelance Project', category:'Penghasilan', wallet:'Bank BCA', amount:1000000, type:'income' },
-  { id:'tx-003', date:'2026-09-24', description:'Belanja Supermarket', category:'Belanja', wallet:'E-Wallet', amount:275000, type:'expense' },
-  { id:'tx-004', date:'2026-09-23', description:'Bayar Tagihan PLN', category:'Tagihan', wallet:'Bank BCA', amount:250000, type:'expense' },
-  { id:'tx-005', date:'2026-09-22', description:'Transfer ke Tabungan', category:'Transfer', fromWallet:'Bank BCA', toWallet:'Cash', wallet:'Bank BCA', amount:1000000, type:'transfer' }
+  { id:'tx-001', date:seedDate(0), description:'Kopi & Cemilan', category:'Makanan', wallet:'Cash', amount:35000, type:'expense' },
+  { id:'tx-002', date:seedDate(1), description:'Freelance Project', category:'Penghasilan', wallet:'Bank BCA', amount:1000000, type:'income' },
+  { id:'tx-003', date:seedDate(1), description:'Belanja Supermarket', category:'Belanja', wallet:'E-Wallet', amount:275000, type:'expense' },
+  { id:'tx-004', date:seedDate(2), description:'Bayar Tagihan PLN', category:'Tagihan', wallet:'Bank BCA', amount:250000, type:'expense' },
+  { id:'tx-005', date:seedDate(3), description:'Transfer ke Tabungan', category:'Transfer', fromWallet:'Bank BCA', toWallet:'Cash', wallet:'Bank BCA', amount:1000000, type:'transfer' }
 ];
 
 let wallets = readJSON(STORAGE.wallets, DEFAULT_WALLETS);
