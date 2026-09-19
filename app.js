@@ -70,7 +70,7 @@ async function bootstrapRemote(){
     if(remote.wallets?.length) wallets=remote.wallets.map(w=>({id:w.id,name:w.name,type:w.wallet_type,openingBalance:Number(w.opening_balance)||0,isActive:w.is_active}));
     if(remote.transactions){
       const walletById=Object.fromEntries(wallets.map(w=>[w.id,w]));
-      transactions=remote.transactions.map(t=>({id:t.id,date:String(t.transaction_date).slice(0,10),description:t.description,category:t.category_id||'Lainnya',wallet:walletById[t.wallet_id]?.name||'',fromWallet:walletById[t.wallet_id]?.name||'',toWallet:'',amount:Number(t.amount)||0,type:t.type,note:t.note||''}));
+      transactions=remote.transactions.map(t=>({id:t.id,date:String(t.transaction_date).slice(0,10),description:t.description,category:t.category_name||'Lainnya',wallet:walletById[t.wallet_id]?.name||'',fromWallet:walletById[t.wallet_id]?.name||'',toWallet:walletById[t.to_wallet_id]?.name||'',amount:Number(t.amount)||0,type:t.type,note:t.note||''}));
     }
     renderStats();renderTransactions();renderWallets();setModalWalletOptions();syncModalType();updateRemoteUser();
   }catch(err){console.error('Remote bootstrap failed:',err);showAuthModal(err.message);}
