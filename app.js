@@ -231,7 +231,6 @@ function saveWallet(e){
   editingWalletId = null;
   renderStats();
   renderWallets();
-bootstrapRemote();
   setModalWalletOptions();
   syncModalType();
 }
@@ -365,3 +364,4 @@ renderStats();
 renderTransactions();
 renderChart();
 renderWallets();
+bootstrapRemote();
