@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#090a0c" />
-  <meta name="wefinance-api-url" content="" />
+  <meta name="wefinance-api-url" content="" />\n  <meta name="supabase-url" content="https://vefjkilwuexnjuyutlkc.supabase.co" />\n  <meta name="supabase-publishable-key" content="sb_publishable_Bfleg5KWc5mdMwCZe1RlaQ_WDvW4GQ8" />
   <title>WeFinance — Money Today, Better Tomorrow</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css" />
 </head>
@@ -23,5 +23,5 @@
       <section id="page-settings" class="page"><div class="page-heading"><div><p class="eyebrow">SISTEM</p><h1>Pengaturan & Data</h1><p>Backup, restore, export, dan pengelolaan data lokal.</p></div></div><div class="panel feature-card"><h2>Memuat data...</h2></div></section>
       <footer>WeFinance <span>© 2026 · Money Today, Better Tomorrow</span><span>v0.9.0</span></footer></main></div>
   <div class="modal-backdrop" id="modal"><div class="modal"><div class="modal-head"><div><p class="eyebrow">TRANSAKSI BARU</p><h2>Catat transaksi</h2></div><button class="icon-button" id="closeModal">×</button></div><div class="type-switch"><button class="active" data-modal-type="income">Pemasukan</button><button data-modal-type="expense">Pengeluaran</button><button data-modal-type="transfer">Transfer</button></div><form id="transactionForm"><label>Deskripsi<input name="description" required placeholder="Contoh: Belanja bulanan" /></label><div class="form-grid"><label>Jumlah<input name="amount" type="number" min="1" required placeholder="350000" /></label><label>Tanggal<input name="date" type="date" required /></label></div><div class="form-grid"><label>Kategori<select name="category"><option>Penghasilan</option></select></label><label>Dompet<select name="wallet"><option>Cash</option></select></label></div><label>Catatan<textarea name="note" rows="3" placeholder="Tambahkan catatan (opsional)"></textarea></label><button class="primary full" type="submit">Simpan Transaksi</button></form></div></div>
-  <script src="api.js"></script><script src="app.js"></script><script src="categories.js"></script><script src="budgets.js"></script><script src="debts.js"></script><script src="bills.js"></script><script src="goals.js"></script><script src="reports.js"></script><script src="data-management.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="api.js"></script><script src="app.js"></script><script src="categories.js"></script><script src="budgets.js"></script><script src="debts.js"></script><script src="bills.js"></script><script src="goals.js"></script><script src="reports.js"></script><script src="data-management.js"></script>
 </body></html>
