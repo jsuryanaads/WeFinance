@@ -64,6 +64,7 @@ function persist(){
 }
 async function bootstrapRemote(){
   if(!window.WF_API?.enabled)return;
+  try{ await window.WF_API.refreshSession(); }catch(err){ console.warn('Supabase session refresh failed:',err); }
   if(!window.WF_API.token){ showAuthModal(); return; }
   try{
     const localSnapshot={wallets:[...wallets],transactions:[...transactions],categories:typeof categories!=='undefined'?[...categories]:[]};
