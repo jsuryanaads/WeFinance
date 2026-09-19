@@ -53,9 +53,42 @@ function normalizeTransaction(t, index){
   };
 }
 
+let syncTimer=null;
 function persist(){
   localStorage.setItem(STORAGE.transactions, JSON.stringify(transactions));
   localStorage.setItem(STORAGE.wallets, JSON.stringify(wallets));
+  if(window.WF_API?.enabled && window.WF_API.token){
+    clearTimeout(syncTimer);
+    syncTimer=setTimeout(()=>window.WF_API.sync().catch(err=>console.warn('Remote sync failed:',err)),300);
+  }
+}
+async function bootstrapRemote(){
+  if(!window.WF_API?.enabled)return;
+  if(!window.WF_API.token){ showAuthModal(); return; }
+  try{
+    const remote=await window.WF_API.bootstrap();
+    if(remote.wallets?.length) wallets=remote.wallets.map(w=>({id:w.id,name:w.name,type:w.wallet_type,openingBalance:Number(w.opening_balance)||0,isActive:w.is_active}));
+    if(remote.transactions){
+      const walletById=Object.fromEntries(wallets.map(w=>[w.id,w]));
+      transactions=remote.transactions.map(t=>({id:t.id,date:String(t.transaction_date).slice(0,10),description:t.description,category:t.category_id||'Lainnya',wallet:walletById[t.wallet_id]?.name||'',fromWallet:walletById[t.wallet_id]?.name||'',toWallet:'',amount:Number(t.amount)||0,type:t.type,note:t.note||''}));
+    }
+    renderStats();renderTransactions();renderWallets();setModalWalletOptions();syncModalType();updateRemoteUser();
+  }catch(err){console.error('Remote bootstrap failed:',err);showAuthModal(err.message);}
+}
+function showAuthModal(errorText=''){
+  if(document.querySelector('#authModal')){document.querySelector('#authModal').classList.add('open');return;}
+  const el=document.createElement('div');el.id='authModal';el.className='modal-backdrop open';
+  el.innerHTML=`<div class="modal"><div class="modal-head"><div><p class="eyebrow">WEFINANCE CLOUD</p><h2>Masuk ke WeFinance</h2><p style="color:#888;font-size:11px">Data keuangan tersimpan di akun Anda.</p></div></div><form id="authForm"><label class="auth-name">Nama <input name="name" placeholder="Nama lengkap" /></label><label>Email <input name="email" type="email" required placeholder="nama@email.com" /></label><label>Password <input name="password" type="password" required minlength="8" placeholder="Minimal 8 karakter" /></label><p id="authError" style="color:#ff777d;font-size:11px">${escapeHtml(errorText)}</p><button class="primary full" type="submit">Masuk</button><button type="button" class="full" id="registerMode">Buat Akun Baru</button></form></div>`;
+  document.body.appendChild(el);
+  let register=false; const form=el.querySelector('#authForm');
+  form.querySelector('.auth-name').style.display='none';
+  el.querySelector('#registerMode').addEventListener('click',()=>{register=!register;form.querySelector('.auth-name').style.display=register?'block':'none';form.querySelector('.auth-name input').required=register;form.querySelector('button[type="submit"]').textContent=register?'Daftar & Mulai':'Masuk';});
+  form.addEventListener('submit',async e=>{e.preventDefault();const d=new FormData(form);try{if(register)await WF_API.register(d.get('name'),d.get('email'),d.get('password'));else await WF_API.login(d.get('email'),d.get('password'));el.remove();updateRemoteUser();await bootstrapRemote();}catch(err){form.querySelector('#authError').textContent=err.message;}});
+}
+function updateRemoteUser(){
+  const u=window.WF_API?.user;if(!u)return;
+  document.querySelectorAll('.profile strong').forEach(x=>x.textContent=u.name||u.email);
+  const h=document.querySelector('#page-dashboard h1');if(h)h.textContent='Selamat Datang, '+(u.name||u.email);
 }
 
 function totals(){
@@ -198,6 +231,7 @@ function saveWallet(e){
   editingWalletId = null;
   renderStats();
   renderWallets();
+bootstrapRemote();
   setModalWalletOptions();
   syncModalType();
 }
