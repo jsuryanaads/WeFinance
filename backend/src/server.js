@@ -9,6 +9,7 @@ const transactionRoutes = require('./routes/transactions');
 const walletRoutes = require('./routes/wallets');
 const categoryRoutes = require('./routes/categories');
 const migrationRoutes = require('./routes/migration');
+const syncRoutes = require('./routes/sync');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -39,6 +40,7 @@ app.use('/api/transactions', authRequired, transactionRoutes);
 app.use('/api/wallets', authRequired, walletRoutes);
 app.use('/api/categories', authRequired, categoryRoutes);
 app.use('/api/migration', authRequired, migrationRoutes);
+app.use('/api/sync', authRequired, syncRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
