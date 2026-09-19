@@ -11,7 +11,7 @@ const categoryRoutes = require('./routes/categories');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const allowedOrigins = (process.env.CORS_ORIGIN || 'https://jsuryanaads.github.io/WeFinance').split(',').map(v => v.trim()).filter(Boolean);
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://jsuryanaads.github.io').split(',').map(v => v.trim()).filter(Boolean);
 
 app.disable('x-powered-by');
 app.use(cors({
