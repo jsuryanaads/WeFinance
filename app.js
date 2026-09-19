@@ -74,7 +74,7 @@ async function bootstrapRemote(){
       const walletById=Object.fromEntries(wallets.map(w=>[w.id,w]));
       transactions=remote.transactions.map(t=>({id:t.id,date:String(t.transaction_date).slice(0,10),description:t.description,category:t.category_name||'Lainnya',wallet:walletById[t.wallet_id]?.name||'',fromWallet:walletById[t.wallet_id]?.name||'',toWallet:walletById[t.to_wallet_id]?.name||'',amount:Number(t.amount)||0,type:t.type,note:t.note||''}));
     }
-    if(remoteEmpty && (localSnapshot.wallets.length||localSnapshot.transactions.length)){ wallets=localSnapshot.wallets;transactions=localSnapshot.transactions; if(typeof categories!=='undefined') categories=localSnapshot.categories; await window.WF_API.sync(); }
+    if(remoteEmpty && (localSnapshot.wallets.length||localSnapshot.transactions.length)){ wallets=localSnapshot.wallets;transactions=localSnapshot.transactions; await window.WF_API.sync(); }
     renderStats();renderTransactions();renderWallets();setModalWalletOptions();syncModalType();updateRemoteUser();
   }catch(err){console.error('Remote bootstrap failed:',err);showAuthModal(err.message);}
 }
