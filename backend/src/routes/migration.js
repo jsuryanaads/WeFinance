@@ -7,7 +7,7 @@ router.get('/bootstrap',async(req,res,next)=>{
     const [wallets,categories,transactions]=await Promise.all([
       pool.query('SELECT id,name,wallet_type,opening_balance,is_active,created_at,updated_at FROM wallets WHERE user_id=$1 ORDER BY created_at',[req.user.id]),
       pool.query('SELECT id,name,type,is_system,created_at,updated_at FROM categories WHERE is_system=true OR user_id=$1 ORDER BY is_system DESC,name',[req.user.id]),
-      pool.query(`SELECT t.id,t.wallet_id,t.category_id,c.name AS category_name,t.type,t.amount,t.transaction_date,t.description,t.note,t.debt_id,t.bill_id,t.goal_id,t.created_at,t.updated_at,tt.to_wallet_id FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transaction_transfers tt ON tt.transaction_id=t.id WHERE t.user_id=$1 AND t.deleted_at IS NULL ORDER BY t.transaction_date DESC,t.created_at DESC`,[req.user.id])
+      pool.query(`SELECT t.id,t.wallet_id,t.category_id,c.name AS category_name,t.type,t.amount,t.transaction_date,t.description,t.note,t.debt_id,t.bill_id,t.goal_id,t.created_at,t.updated_at,t.from_wallet_id,t.to_wallet_id,t.transfer_group_id FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.user_id=$1 AND t.deleted_at IS NULL ORDER BY t.transaction_date DESC,t.created_at DESC`,[req.user.id])
     ]);
     res.json({data:{wallets:wallets.rows,categories:categories.rows,transactions:transactions.rows}});
   }catch(error){next(error);}
@@ -48,7 +48,7 @@ router.post('/import',async(req,res,next)=>{
         [req.user.id,walletId,categoryId||null,t.type||'expense',Number(t.amount)||0,t.date||new Date().toISOString().slice(0,10),String(t.description||'Transaksi'),t.note||null]);
       if((t.type||'')==='transfer'&&t.toWallet){
         const toWalletId=walletMap.get(String(t.toWalletId||t.toWallet));
-        if(toWalletId)await client.query('INSERT INTO transaction_transfers(transaction_id,from_wallet_id,to_wallet_id) VALUES($1,$2,$3)',[result.rows[0].id,walletId,toWalletId]);
+        if(toWalletId)await client.query('UPDATE transactions SET from_wallet_id=$1,to_wallet_id=$2,transfer_group_id=$3 WHERE id=$4',[walletId,toWalletId,require('crypto').randomUUID(),result.rows[0].id]);
       }
       imported++;
     }
