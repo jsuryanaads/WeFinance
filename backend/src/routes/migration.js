@@ -7,7 +7,7 @@ router.get('/bootstrap',async(req,res,next)=>{
     const [wallets,categories,transactions]=await Promise.all([
       pool.query('SELECT id,name,wallet_type,opening_balance,is_active,created_at,updated_at FROM wallets WHERE user_id=$1 ORDER BY created_at',[req.user.id]),
       pool.query('SELECT id,name,type,is_system,created_at,updated_at FROM categories WHERE is_system=true OR user_id=$1 ORDER BY is_system DESC,name',[req.user.id]),
-      pool.query('SELECT id,wallet_id,category_id,type,amount,transaction_date,description,note,debt_id,bill_id,goal_id,created_at,updated_at FROM transactions WHERE user_id=$1 AND deleted_at IS NULL ORDER BY transaction_date DESC,created_at DESC',[req.user.id])
+      pool.query(`SELECT t.id,t.wallet_id,t.category_id,c.name AS category_name,t.type,t.amount,t.transaction_date,t.description,t.note,t.debt_id,t.bill_id,t.goal_id,t.created_at,t.updated_at,tt.to_wallet_id FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN transaction_transfers tt ON tt.transaction_id=t.id WHERE t.user_id=$1 AND t.deleted_at IS NULL ORDER BY t.transaction_date DESC,t.created_at DESC`,[req.user.id])
     ]);
     res.json({data:{wallets:wallets.rows,categories:categories.rows,transactions:transactions.rows}});
   }catch(error){next(error);}
