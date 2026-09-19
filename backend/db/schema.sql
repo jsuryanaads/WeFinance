@@ -200,3 +200,5 @@ ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_bill_id_fkey;
 ALTER TABLE transactions ADD CONSTRAINT transactions_bill_id_fkey FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE RESTRICT;
 ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_goal_id_fkey;
 ALTER TABLE transactions ADD CONSTRAINT transactions_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE RESTRICT;
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS password_hash TEXT;
