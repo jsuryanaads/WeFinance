@@ -1,15 +1,16 @@
+const crypto = require('crypto');
 const express = require('express');
 const pool = require('../db');
 const router = express.Router();
 
 function normalizeTransaction(row) {
-  return { id:row.id,userId:row.user_id,walletId:row.wallet_id,categoryId:row.category_id,type:row.type,amount:Number(row.amount),date:row.transaction_date,description:row.description,note:row.note,debtId:row.debt_id,billId:row.bill_id,goalId:row.goal_id,createdAt:row.created_at,updatedAt:row.updated_at };
+  return {id:row.id,userId:row.user_id,walletId:row.wallet_id,categoryId:row.category_id,type:row.type,amount:Number(row.amount),date:row.transaction_date,description:row.description,note:row.note,debtId:row.debt_id,billId:row.bill_id,goalId:row.goal_id,fromWalletId:row.from_wallet_id||null,toWalletId:row.to_wallet_id||null,transferGroupId:row.transfer_group_id||null,createdAt:row.created_at,updatedAt:row.updated_at};
 }
 
 router.get('/', async (req,res,next)=>{
   try{
     const limit=Math.min(Math.max(Number(req.query.limit)||50,1),200);
-    const result=await pool.query(`SELECT id,user_id,wallet_id,category_id,type,amount,transaction_date,description,note,debt_id,bill_id,goal_id,created_at,updated_at
+    const result=await pool.query(`SELECT id,user_id,wallet_id,category_id,type,amount,transaction_date,description,note,debt_id,bill_id,goal_id,from_wallet_id,to_wallet_id,transfer_group_id,created_at,updated_at
       FROM transactions WHERE user_id=$1 AND deleted_at IS NULL ORDER BY transaction_date DESC,created_at DESC LIMIT $2`,[req.user.id,limit]);
     res.json({data:result.rows.map(normalizeTransaction)});
   }catch(error){next(error);}
@@ -45,7 +46,7 @@ router.post('/',async(req,res,next)=>{
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING id,user_id,wallet_id,category_id,type,amount,transaction_date,description,note,debt_id,bill_id,goal_id,created_at,updated_at`,
       [req.user.id,type==='transfer'?fromWalletId:walletId,categoryId||null,type,numericAmount,date,String(description).trim(),note||null,debtId||null,billId||null,goalId||null]);
-    if(type==='transfer')await client.query('INSERT INTO transaction_transfers(transaction_id,from_wallet_id,to_wallet_id) VALUES($1,$2,$3)',[result.rows[0].id,fromWalletId,toWalletId]);
+    if(type==='transfer')await client.query('UPDATE transactions SET from_wallet_id=$1,to_wallet_id=$2,transfer_group_id=$3 WHERE id=$4',[fromWalletId,toWalletId,crypto.randomUUID(),result.rows[0].id]);
     await client.query('COMMIT');
     res.status(201).json({data:normalizeTransaction(result.rows[0])});
   }catch(error){await client.query('ROLLBACK');if(error.status)return res.status(error.status).json({error:error.message});next(error);}
